@@ -2,7 +2,7 @@
 # Python 3 — just run:  python metaworld_server.py
 # Then open http://localhost:8000/ in your browser (or point your TTS scraper there)
 
-import requests, time
+import requests, time, json
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 
@@ -18,18 +18,87 @@ OUT_DIR = "metaworld_html"
 os.makedirs(OUT_DIR, exist_ok=True)
 
 headers = {"User-Agent": "Mozilla/5.0 (Wayback-friendly crawler)"}
+memory_file = 'current.json'
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
 
+    def parse_royalroad(self, path, soup):
+        ent = path.split('/')
+        chapter_key = ent[-1]
+        nav = soup.find("div", class_="nav-buttons").find_all("a")
+        
+        novel = {
+            #'id': ent[10],
+            'name': soup.find("div", class_="fic-header").find("h2").text,
+            'url': '/https://web.archive.org' + soup.find("div", class_="fic-header").find("a").attrs.get('href'),
+            'chapter': {
+                #'id': ent[13],
+                'name': soup.find("div", class_="fic-header").find("h1").text,
+                'url': path[1:]
+            },
+            'current': path
+        }
+        
+        global memory_file
+        with open(memory_file, 'w') as f:
+          json.dump(novel, f)
+        
+        links = '<div class="nav-buttons">'
+        
+        for item in nav:
+            links += '<a href="/https://web.archive.org' + item.attrs.get('href') + '">' + item.text.strip() + '</a>'
+        
+        links += '</div>'
+        content = soup.find("div", class_="chapter-inner chapter-content")
+        style = "<style>body {color: rgba(255, 255, 255, .6);background:#171717;font-family: Arial, sans-serif; font-size: 18px; line-height: 160%;}</style>"
+        content = f"<title>{novel['chapter']['name'] + ' - ' + novel['name']}</title>{style}<div class=\"header\"><h1 class=\"novel-title\">{novel['name']}</h1><h2 class=\"chapter-title\">{novel['chapter']['name']}</h2>\n{links}</div>\n<div class=\"container\">" + str(content) + '</div>'
+        return content
+        
     def do_GET(self):
         path = unquote_plus(self.path.split('?')[0])   # strip query string
 
         # ←←← YOUR CUSTOM PATHS GO HERE ←←← #https://web.archive.org/web/20190430013218/https://www.royalroad.com/fiction/14167/metaworld-chronicles/chapter/163618/chapter-2-awakening
         
-        if "web.archive.org" in path and "royalroad.com" in path:
+        if path == "/current":
+            global memory_file
+            if os.path.isfile(memory_file):
+                novel = json.load(open(memory_file))
+                path = novel['current']
+                self.send_custom_html(f'<script>window.location = \'{novel['current']}\'</script>')
+                return
+            else:
+                self.send_custom_text(f"No data")
+                return
+        
+        if path.startswith('/raw/') and "web.archive.org" in path and "royalroad.com" in path:
             ent = path.split('/')
+            chapter_key = ent[-1]
+            local_file = os.path.join(OUT_DIR, f"{ent[-1]}.html")
+            
+            if os.path.exists(local_file):
+                with open(local_file, "r", encoding="utf-8") as f:
+                    content = f.read()
+                    if len(content) > 0:
+                        self.send_custom_html(content)
+                    else:
+                        self.send_custom_text(f"File is empty")
+            else:
+                self.send_custom_text(f"No file")
+        
+        rr_archive = "web.archive.org" in path and "royalroad.com" in path
+        
+        if "metaworld-chronicles" in path and 'web.archive.org' in path:
+            rr_archive = 1
+        
+        if 0 and "metaworld-chronicles" in path:
+            rr_archive = 1
+            path = '///web.archive.org/web////www.royalroad.com/fiction//metaworld-chronicles/chapter//chapter-2-awakening/'
+        
+        if rr_archive:
+            ent = path.split('/')
+            
             #self.send_custom_text(f"Metaworld Fetching Path: {path[1:]}...")
             chapter_key = ent[-1]
             local_file = os.path.join(OUT_DIR, f"{ent[-1]}.html")
@@ -40,16 +109,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     if len(content) > 0:
                         if "script" in content:
                             soup = BeautifulSoup(content, "html.parser")
-                            nav = soup.find("div", class_="nav-buttons").find_all("a")
-                            links = '<div class="nav-buttons">'
-                            
-                            for item in nav:
-                                links += '<a href="/https://web.archive.org' + item.attrs.get('href') + '">' + item.text.strip() + '</a>'
-                            
-                            links += '</div>'
-                            content = soup.find("div", class_="chapter-inner chapter-content")
-                            style = "<style>body {color: rgba(255, 255, 255, .6);background:#171717;font-family: Arial, sans-serif; font-size: 18px; line-height: 160%;}</style>"
-                            content = f"{style}<h1>{chapter_key}</h1>\n{links}\n" + str(content)
+                            content = self.parse_royalroad(path, soup)
                             #content = links + content
                             #nav.attrs.get('href')
                             #nav.text.strip()
@@ -60,12 +120,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             try:
                 r = requests.get(url, headers=headers, timeout=20)
                 
-                if "Gwen" not in r.text or "This URL has been excluded" in r.text:
+                #if "Gwen" not in r.text or "This URL has been excluded" in r.text:
+                if "This URL has been excluded" in r.text:
                     self.send_custom_text("Blocked or irrelevant capture")
                     return
                 
-                #soup = BeautifulSoup(r.text, "html.parser")
+                soup = BeautifulSoup(r.text, "html.parser")
                 #content_div = soup.find("div", class_="chapter-inner chapter-content")
+                content_div = self.parse_royalroad(path, soup)
                 if not content_div:
                     self.send_custom_text("No chapter-inner found")
                     return
@@ -79,6 +141,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     f.write(clean_html)
 
                 self.send_custom_html(content_div)
+                
+                #nav = soup.find("div", class_="nav-buttons").find_all("a")
+                #nav[-1].attrs.get('href')
+                #threading.Thread(target=self.fetch_missing_chapter, args=(chapter_num,), daemon=True).start()
                 
             except requests.exceptions.RequestException as e:
                 self.send_custom_text(f"Fetch failed: {e}")
