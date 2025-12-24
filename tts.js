@@ -35,7 +35,7 @@ window.allkey = function(e){
     //console.log(e);
   }
 
-  if( $('#chr-content').length > 0 ) {
+  if( $('#chr-content').length > 0 || $('.chapter-inner').length > 0 ) {
     if( e.shiftKey ) {
       //if( ['$', '^'].indexOf(key) > -1
       //({'ArrowLeft': '#prev_chap', 'ArrowRight': '#next_chap'})['ArrowLeft']
@@ -91,7 +91,7 @@ $(document).ready(function(){
   }
 
   //console.log('chapterobject? ', $('#chr-content'));
-  if( $('#chr-content').length > 0 ) {
+  if( $('#chr-content').length > 0 || $('.chapter-inner').length > 0 ) {
     //$(document).off('keydown');
     window.addEventListener('keyup', allkey, true); //useCapture
     window.addEventListener('keydown', allkey, true);
@@ -206,6 +206,7 @@ if( typeof olv == "undefined" ) {
         dammed:/da\*\*ed|d(\* )*\*ed /ig,
         boobs:/b\*obs/ig,
         'Yuanjuan':/Dongdong/g,
+        'Mrs. ':/Nis\. /g,
         A:/Ⓐ/g,
         B:/Ⓑ/g,
         C:/Ⓒ/g,
@@ -415,6 +416,210 @@ a, a:hover, a:focus, .text-info a {color: #666; color: #8D8D8D;}\
         button: 'a.btn-icon:nth-child(3)',
         next: 'a.btn-icon:nth-child(3)',
         style: '.olv.btn {color: #82A82D;border-color: #82A82D;background: #121212;}'
+      },
+      'localhost:9094': {
+        content: '.chapter-content',
+        button: '.glyphicon-setting',
+        next: '.nav-buttons > a:nth-child(2)',
+        style: '.header {line-height: 14px; top:0; position: fixed;width: 100%; background:#171717; padding: 10px; z-index:1000;} .header * { font-size:14px; padding:0;margin: 0; }\
+.novel-title {display:none;} .container {padding-top: 10px; margin:10px;} \
+.nav-buttons {position: fixed;top:8px; right: 8px;} .nav-buttons a {padding: 0 4px; font-size:16px; font-weight:bold; color: #8D8D8D;text-decoration: none;}\
+body {margin:0; 1color: rgba(255, 255, 255, .6);1background:#232323;font-family: Arial, sans-serif; font-size: 18px; line-height: 160%;} .chapter-page-body .chapter-page .chapter-content p {color: rgba(255, 255, 255, .6);} .fiction-page .fic-header .fic-title select option {border: 1px solid #000; background: #010; color: #fff; background:transparent;} .fiction-page .fic-header .fic-title {margin-bottom: 0px;} .fiction-page .fic-header .fic-title h1 {margin-top: 0;}',
+        addition: 36,
+        load: function(){
+          olv.jq = $;
+          window.jq = $;
+          if( !olv.is('preLoaded') ) {
+            olv.preLoaded = 1;
+
+            if( $(olv.site.next).length > 0 )
+              $.get( $(olv.site.next).attr('href') ).done(function(e){
+                olv.nextContent = e;
+              });//*/
+
+            //$('.chapter-title').textContent
+          }
+
+          if( olv.uri('sylver-seeker') )
+            $(olv.site.content + ' > p').each(function(){
+              if( $(this).find('strong').length > 0 ) {
+                console.log($(this).text())
+
+                $(this).remove();
+              }
+            });
+
+          $(olv.site.content + ' > p').each(function(){
+            if( $(this).text().trim() == '' )
+              $(this).remove();
+          });
+
+          //368 : missing
+          //C 338 - Stratums
+          if( $(olv.site.content + ' > p').length == 0 && olv.jq(olv.site.content).text().length > 3000 && $(olv.site.content + ' div').length > 20 ) {
+            $(olv.site.content + ' div').each(function(){
+              if( $(this).text().trim() == '' )
+                $(this).remove();
+
+              if( $(this).find('p').length > 0 )
+                $(this).replaceWith($(this).html());
+              else if( $(this).find('p').length == 0 ) {
+                //console.log($(this).text().length, $(this).text());
+                $(this).replaceWith('<p>'+$(this).text().trim()+'</p>');
+              }
+            });
+          }
+
+          if( $('.chapter-title').length > 0 && $('.chapter-title').text().indexOf('Chapter Index') == -1 )
+            $('.chapter-title').text($('.chapter-title').text().replace('Chapter ', 'C '));
+          //$('.nav-buttons a:eq(0)').text('<');
+          //$('.nav-buttons a:eq(1)').text('>');
+          $('.nav-buttons a').each(function(){
+              var t = $(this).text().trim();
+              if (t.match(/prev|«/i)) $(this).text('<');
+              if (t.match(/next|»/i)) $(this).text('>');
+          });
+
+  //if
+  //http://localhost:9094/https://web.archive.org/web/20190430213512/https://www.royalroad.com/fiction/14167/metaworld-chronicles/chapter/357277/chapter-248-a-city-of-gold
+  //add following as > link tag
+  //<a href="/https://web.archive.org/web/20190430213614/https://www.royalroad.com/fiction/14167/metaworld-chronicles/chapter/356321/chapter-249-cocks-and-hens">&gt;</a>
+//olv.nexthref = '/https://web.archive.org/web/20190430213614/https://www.royalroad.com/fiction/14167/metaworld-chronicles/chapter/356321/chapter-249-cocks-and-hens'
+
+          $(document).on('click', '.header :header', function(){
+            $('.header :header').toggle();
+          });
+        }
+      },
+      'localhost:9092': {
+        load: function(){
+          //PS Documents\Books> py.exe -m http.server 9092
+
+          olv.jq = $;
+          //$ = olv.jq
+          $('body').css({'background': '#232323', 'color': 'rgba(255, 255, 255, .6)'});
+          olv.jq('body').append('<style class="olvStyle">\
+a {color: #82A82D;} .chapters a {display: block; color: #bbb;cursor: pointer;} .chapters a:hover {text-decoration: underline}\
+</style>');
+          //olv.jq('body .olvStyle').html('');
+          //Number.parseInt(olv.jq('body .chapters a').eq(17).text().match(/\d+/)[0])
+
+          olv.jq('body div:eq(0)').hide();
+
+          olv.jq('body').append('<div class="chapters"></div>');
+
+          olv.chapters = olv.jq('p .bold:contains("Chapter"):contains(" - ")');
+
+          olv.jq('body .chapters').html('');
+
+          olv.num = 0;
+          olv.last = Number.parseInt(olv.chapters.last().text().match(/\d+/)[0]) + 1;
+
+          olv.chapters.each(function(){
+            olv.num = olv.num + 1;
+            var num = Number.parseInt(olv.jq(this).text().match(/\d+/)[0]);
+            var max = olv.num + 20;
+
+            while( olv.num < num && olv.num < max && olv.num < olv.last ) {
+              olv.jq('body .chapters').append('<a>Chapter '+olv.num+'</a>');
+              olv.num = olv.num + 1;
+            }
+
+            olv.jq('body .chapters').append('<a>'+olv.jq(this).text()+'</a>');
+          });
+
+          return;
+          olv.paragraph = 0;
+          olv.chapters = olv.jq('p .bold:contains("Chapter"):contains(" - ")');
+          //$(olv.container).attr('id', 'chapter-content');
+          //olv.site.content = '#chapter-content';
+          //$(olv.site.content + ' > div').each( function(){ $(this).replaceWith( '<p>' + $(this).html() + '</p>' ); } );
+          //olv.init_buttons();
+
+          //fix style .olv .btn { display: inline; }
+          //$('head').append('<style>.olv .btn { display: inline; } .chapter-control { display:none; } .chapter-text {color: rgba(255, 255, 255, .6) !important;} body.dark-theme {background-color: #232323;}</style>');
+          olv.reader.load();
+          //olv.jq('p .bold:contains("Chapter"):contains(" - ")')
+
+          return;
+          olv.content = $(olv.site.content).children();
+
+          $('.olv.parrot').show();
+          if( olv.reader.auto != 0 )
+            olv.read();
+
+          return;
+          if( novel.id != '' ) {
+            olv.novel = GM_getValue('novel.'+novel.id);
+
+            var chapter = {
+                id: CHAPTER_ID,
+                num: $('#table-of-contents-btn > span:nth-child(1)').text().replace('Chapter ', ''),
+                name: CHAPTER_TITLE,
+                url: window.location.toString(),
+                chapter_id: CHAPTER_ID
+              };
+
+            if( JSON.stringify(olv.novel.chapter) != JSON.stringify(chapter) && olv.autoSave == 0 ) {
+              olv.novel.chapter = chapter;
+
+              GM_setValue('novel.'+novel.id, olv.novel);
+            }
+          }
+
+          olv.site.chapter_title = 'Chapter ' + CHAPTER_TITLE.replace('chapter ', '');
+
+          //console.log( $('.chapter-text') );
+          olv.container = '.' + $('style:contains("block"):contains("important")').text().replace(/\.chapter.*|.*;/g, '').replace(/[^a-z]/ig, '');
+          //$(olv.container)
+
+          //perform cleanup and continuation
+          $(olv.container+' button').remove();
+          olv.paragraph = 0;
+          $(olv.container).attr('id', 'chapter-content');
+          olv.site.content = '#chapter-content';
+          $(olv.site.content + ' > div').each( function(){ $(this).replaceWith( '<p>' + $(this).html() + '</p>' ); } );
+          olv.init_buttons();
+
+          if( $(olv.site.content + ' p:contains("Novelight.net")').length > 0 )
+            $(olv.site.content + ' p:contains("Novelight.net")').remove();
+
+          //fix style .olv .btn { display: inline; }
+          $('head').append('<style>.olv .btn { display: inline; } .chapter-control { display:none; } .chapter-text {color: rgba(255, 255, 255, .6) !important;} body.dark-theme {background-color: #232323;}</style>');
+          olv.reader.load();
+          olv.content = $(olv.site.content).children();
+          var count = 0;
+          var lr = [['{', '«'], ['}', '»']];
+          var replaceList = [
+            '(Don’t copy, read here)',
+            '[N O V E L I G H T]'
+          ];
+          olv.content.each(function(){
+            replaceList.entries().forEach(([rkey, rval]) => {
+              if( $(this).text().indexOf(rval) != -1 )
+                $(this).text( $(this).text().replace(rval, '') );
+            });
+
+            var badChars = $(this).text().match(/[^a-zA-Z0-9 '"’“”.,!?\-;]/g);
+            if( badChars != null && badChars.length > 1 && badChars.indexOf('(') > -1 && badChars.indexOf(')') > -1 ) {
+              badChars.length = badChars.indexOf('(');
+              $(this).text( $(this).text().replace(/\(.*\)/, '') );
+            }
+
+            if( badChars != null && badChars.length > 1 && (badChars[badChars.length-1] == badChars[0] || lr[1].indexOf(badChars[badChars.length-1]) > -1 && lr[0].indexOf(badChars[0]) > -1) ) {
+              var text = $(this).text();
+              text = text.substr(0, text.indexOf(badChars[0])) + text.substr(text.indexOf(badChars[badChars.length-1], text.indexOf(badChars[0])+1)+1);
+              $(this).text( text );
+            }
+
+            $(this).attr('para', count );
+            count = count + 1;
+          });
+
+          $('.olv.parrot').show();
+          if( olv.reader.auto != 0 )
+            olv.read();
+        }
       },
       novelight: {
       	content: '',
@@ -661,7 +866,7 @@ a, a:hover, a:focus, .text-info a {color: #666; color: #8D8D8D;}\
           if( $(olv.site.content + ' p').length > 0 ) {
             olv.nexthref = $(olv.site.next).eq(0).attr('href');
             olv.reader.cacheNext();
-            olv.preLoadNext = 1;
+            olv.preLoadNext = (localStorage.getItem('olv.preLoadNext') || 0);
           }
         },
       },
@@ -2339,7 +2544,49 @@ a, a:hover, a:focus, .text-info a {color: #666; color: #8D8D8D;}\
             'TAGOQT',
             'lnreads',
             'original site',
-            'webnovel'
+            'webnovel',
+            'S T E L L A R C L O U D',
+            'O R A N G E S T A R',
+            '[Talia R.] [K.Rom]',
+            'Y E L L O W S T A R',
+            '[Camille] [Linds] [Esther D.]',
+            '[Celeste S.] [Azurixa] [Esther D.] [Christine G.-L.]',
+            '[Smurfinbatik] [Rose Ann D.] [J Jean] [K.Rom] [Leticia P.] [Tori D.] [Scorpion Princess]',
+            '[Cindy] [Deelah H]',
+            '[Book W.] [Britnie M.] [Christigale M.] [DetectiveGeek421] [Hong] [Ine Oroh] [Kiiayame]',
+            '[kuroneko_chan] [onepiece] [Hlau V.] [Sweetlove] [Liznel M.] [Ray]',
+            '[Celeste S.] [Azurixa] [Esther D.] [Christine G.-L.]',
+            '[Smurfinbatik] [J Jean] [K.Rom] [Tori D.] [Nicole]',
+            '[Cindy] [Victoria]',
+            '[kuroneko chan] [onepiece] [Hlau V.] [Sweetlove] [Liznel M.] [Leticia P.] [Scorpion Princess]',
+            '[Scorpion Princess]',
+            'G O L D S T A R',
+            'Y E L O W S A R',
+            'S T A R',
+            'Raz P',
+            'Christigale',
+            'Nanashi',
+            '[Nicole]',
+            'Kiiayame',
+            'KRom',
+            '[Leticia P.]',
+            '[Hong]',
+            '[Victoria]',
+            'many thanks to everyone who bought me coffee',
+            '[Passerby]',
+            '[Smurfinbatik]',
+            '[Quae]',
+            '[Manon]',
+            'S U N',
+            '[onepiece]',
+            '[Malinkat]',
+            '[kuroneko chan]',
+            '[Amanda]',
+            '[Liznel M.]',
+            'kuroneko',
+            'CELESTIAL CONQUEROR',
+            '[Onepiece]',
+            '[Nevy]'
           ]);
 
           removeSet.forEach(obj => {
@@ -2360,6 +2607,9 @@ a, a:hover, a:focus, .text-info a {color: #666; color: #8D8D8D;}\
           if( $('a[class="btn btn-unlock btn-block"]').length > 0 ) {
             $('a[class="btn btn-unlock btn-block"]').remove();
           }
+
+          if( $('#chr-content p:contains("Raz P")').length > 0 )
+            $('#chr-content p:contains("Raz P")').remove();
 
           // To readers! our content is stolen Please copy and search this link " ]39hpcnj " to support us
 
@@ -2461,9 +2711,31 @@ a, a:hover, a:focus, .text-info a {color: #666; color: #8D8D8D;}\
             });
           }
 
+
+          if( olv.uri('the-grand-secretarys-pampered-wife') ) {
+            //remove patreon entries at beginning
+            if( $('#chr-content p').length > 0 )
+            for( var i = 0; i < 20; i ++) {
+              if( $('#chr-content p').eq(i).text().trim() != '' ) {
+                //console.log($('#chr-content p').eq(i).text().match(/([A-Z] [A-Z] )/g))
+                var r = $('#chr-content p').eq(i).text();
+                r = r.match(/([A-Z] [A-Z] )/g);
+                if( r != null && r.length > 3 )
+                  $('#chr-content p').eq(i).remove();
+
+                var t = $('#chr-content p').eq(i).text();
+                if( /\[/.test(t) && /\]/.test(t) )
+                  $('#chr-content p').eq(i).remove();
+              }
+            }
+
+            if( $('#chr-content p:contains("GSPW")').length > 0 )
+            $('#chr-content p:contains("GSPW")').prev().nextAll().remove();
+          }
+
           if( olv.uri('quick-transmigration-heroine-arrives-woman-rapidly-retreats') ) {
             olv.reader.cacheNext();
-            olv.preLoadNext = 1;
+            olv.preLoadNext = (localStorage.getItem('olv.preLoadNext') || 0);
 
             if( $('#chr-content p:contains("Light Queen of the End of the World vs. The Space Ability Woman")').length == 1 )
               $('#chr-content p:contains("Light Queen of the End of the World vs. The Space Ability Woman")').remove();
@@ -2702,6 +2974,30 @@ function getContent(novel_id, chapter_id) {
 
           if( $('div[id^="pf-"]').length > 0 )
             $('div[id^="pf-"]').remove();
+
+          olv.stu = '';
+
+          $('#chr-content p').each(function(){
+            if( olv.stu != '' ) {
+              $(this).text( olv.stu + ' ' + $(this).text().trim() );
+              olv.stu = '';
+            }
+
+            if( /(Mrs|Ms|Mr)\.$/.test($(this).text().trim()) ) {
+              olv.stu = $(this).text().trim();
+              $(this).remove();
+            }
+          })
+
+          //a EUR|
+          $('#chr-content p:contains("EUR")').each(function(){
+            if( /a EUR\|/.test($(this).text().trim()) ) {
+              $(this).text( $(this).text().trim().replace(/a EUR\|/, '.') );
+            }
+            if( /a EUR"/.test($(this).text().trim()) ) {
+              $(this).text( $(this).text().trim().replace(/a EUR"/, '.') );
+            }
+          })
 
           //Process next chapter
           //olv.nexthref
@@ -3860,7 +4156,7 @@ return;
           if( $(olv.site.content + ' p').length > 0 ) {
             olv.nexthref = $(olv.site.next).eq(0).attr('href');
             olv.reader.cacheNext();
-            olv.preLoadNext = 1;
+            olv.preLoadNext = (localStorage.getItem('olv.preLoadNext') || 0);
           }
         }
       },
@@ -3978,6 +4274,7 @@ return;
         //var para = $('');
 
         var row = $(olv.site.content + ' p[para='+olv.paragraph+']');
+        if( typeof row.offset() != 'undefined' )
       	if( olv.reader.scroll != 0 || row.length && ($(window).scrollTop() + $(window).height()) < ( row.offset().top + row.height() + $('.olv.parrot').height() ) ) {
         	var t = row.offset().top - olv.site.addition;
 
@@ -4071,7 +4368,7 @@ return;
           //olv.novel = GM_getValue('novel.'+novel.id);
           //console.log('wtf', novel, olv.novel, $('script:contains("const novel =")') );
           if( $('a.header-logo').length > 0 && $('a.header-logo').text().trim() == "Novel Bin" && $('script:contains("const novel =")').length > 0 && typeof olv.novel == 'undefined' ) {
-            olv.preLoadNext = 1;
+            olv.preLoadNext = (localStorage.getItem('olv.preLoadNext') || 0);
             var novel = olv.parseConst('const novel =');
             olv.novel = GM_getValue('novel.'+novel.id);
 
@@ -4361,6 +4658,7 @@ if( $('#prev_chap').length > 0 )
         olv.reader.cacheNext();
       },
       cacheNext: function(){
+        if( !olv.uri('localhost:9094') )
         $.get( olv.nexthref, function( data ) {
           olv.nextChapter = data;
         }).fail(function(){
@@ -4401,7 +4699,7 @@ if( $('#prev_chap').length > 0 )
             }
           });
 
-          olv.preLoadNext = 1;
+          olv.preLoadNext = (localStorage.getItem('olv.preLoadNext') || 0);
         }
 
         if ( href.toString().indexOf('novelcenter') > 0 ) {
@@ -5279,15 +5577,22 @@ olv.op = {
       $('.olv input.'+arg).prop('checked', true);
       olv[arg] = 1;
     }
+
+    if( true )
+      localStorage.setItem('olv.'+arg, olv[arg]);
   }
 };
 
 //olv.fn.end.push
 //olv.preLoadNext = 0
-var arg = 'preLoadNext';
+//var arg = 'preLoadNext';
+
+Object.entries(olv.btn.ls).forEach(([arg, val]) => {
 opts += '<div class="btn '+arg+'" style="\
 padding:2px 6px; cursor:default;margin-top:5px; float:right;">\
-BgLoadNext: <input olvBtn="'+arg+'" class="'+arg+'" type="checkbox" value="1" ' + (olv[arg] != 0 ? 'checked="checked"' : '') + ' /></div>';
+'+val[0]+': <input olvBtn="'+arg+'" class="'+arg+'" type="checkbox" value="'+(localStorage.getItem('olv.'+arg) || 0)+'" ' + (olv[arg] != 0 ? 'checked="checked"' : '') + ' /></div>';
+
+});
 
 if( !olv.is('newOptions') ) {
   olv.newOptions = function(e){
@@ -7641,13 +7946,13 @@ $( opts ).insertBefore( button );
           if( $(olv.site.content + ' > p').eq(0).text().trim().substr(0, olv.firstPg.trim().length + 1).trim() == olv.firstPg.trim() )
             $(olv.site.content + ' > p').eq(0).text(olv.firstPg.trim());
 
-          if( olv.navbarChapter.text().indexOf( $(olv.site.content + ' > p').eq(0).text().trim() ) > -1 )
+          if( typeof olv.navbarChapter != 'undefined' && olv.navbarChapter.text().indexOf( $(olv.site.content + ' > p').eq(0).text().trim() ) > -1 )
             $(olv.site.content + ' > p').eq(0).remove();
 
           if( $('.navbar-breadcrumb :contains("Chapter"):last').length > 0 && $('.navbar-breadcrumb :contains("Chapter"):last').text().trim().replace(/[^a-zA-Z0-9]*/, '').indexOf(olv.firstPg.trim().replace(/[^a-zA-Z0-9]*/, '')) > 0 )
             $(olv.site.content + ' > p').eq(0).remove();
 
-          if( /^[0-9]*\s/.test($(olv.site.content + ' > p').eq(0).text().trim()) ) {
+          if( typeof olv.navbarChapter != 'undefined' && /^[0-9]*\s/.test($(olv.site.content + ' > p').eq(0).text().trim()) ) {
             var num = $(olv.site.content + ' > p').eq(0).text().trim().match(/^[0-9]*/);
 
             if( olv.navbarChapter.text().indexOf(num) > -1 )
