@@ -156,7 +156,7 @@ if( typeof olv == "undefined" ) {
  	unsafeWindow.olv = {
     reloaded: (window.performance && window.performance.navigation.type === window.performance.navigation.TYPE_RELOAD),
     style:'.bg-gradient-gray {background:black; color:white;} .olv-chapter-title span {background: #121212;color: #82A82D;border:0px !important; padding:0;} .paragraph.options, .olv.options,.olv .btn {background: #121212; border: 1px solid transparent;border-radius: 4px !important;border-color: #82A82D;color: #82A82D;} .paragraph.options:hover,.olv.options:hover,.olv .btn:hover {color: #AADB3C;border-color: #AADB3C;}',
-    readbuffer: '',
+    readbuffer: (localStorage.getItem('olv.readbuffer') || ''),
     q:{}, //reading queue
     default: {
       voice: 1, //zira
@@ -918,7 +918,7 @@ a {color: #82A82D;} .chapters a {display: block; color: #bbb;cursor: pointer;} .
                     if( num.length )
                       name = '<span itemprop="name" class="lastNum" style="margin-left: 2px;">'+num[0]+'</span>';
 
-                    $('.navbar-breadcrumb .novel-link').parent().append(name);
+                    //$('.navbar-breadcrumb .novel-link').parent().append(name);
                   }
 
                   }, 400);
@@ -928,6 +928,16 @@ a {color: #82A82D;} .chapters a {display: block; color: #bbb;cursor: pointer;} .
                   $('.navbar-breadcrumb .novel-link').addClass('glyphicon');
                   $('.navbar-breadcrumb .novel-link').addClass('glyphicon-book');
                   $('.navbar-breadcrumb .novel-link').css('color', '#8D8D8D');
+
+                  if( olv.uri('t:90') && $('meta[property="og:url"]').length > 0 ) {
+                    var href = $('.navbar-breadcrumb .novel-link').attr('href');
+                    var home = $('meta[property="og:url"]').attr('content');
+                    var i = home.indexOf(href) + href.length;
+                    //console.log('urll: ', home.substr(0, i));
+                    //console.log('url: ', 'https://novelbin.com/b' + $('.navbar-breadcrumb .novel-link').attr('href'))
+                    $('.navbar-breadcrumb .novel-link').attr('href', home.substr(0, i));
+
+                  }
 
                   //if( $('.olv-chapter-title .current').text().length + 6 > olv.navbarChapter.text().trim().length )
                   //obj.text( $('.olv-chapter-title .current').text() );
@@ -991,6 +1001,7 @@ a {color: #82A82D;} .chapters a {display: block; color: #bbb;cursor: pointer;} .
                   //olv.chapters.each(function(){ console.log($(this).get(0).outerHTML) });
                   olv.chapters.each(function(){ $('.navbar-breadcrumb .chr-bar').append($(this).get(0).outerHTML); });
 
+                  if( olv.is('chapter.url') )
                   $('.navbar-breadcrumb .chr-bar').scrollTop( $('.chr-bar a[href="'+olv.chapter.url+'"]').offset().top -20 );
 
                   olv.popLastNum($('.navbar-breadcrumb .chr-bar a').length);
@@ -2149,6 +2160,11 @@ a {color: #82A82D;} .chapters a {display: block; color: #bbb;cursor: pointer;} .
             //if( olv.novel.tag.indexOf('Female protagonist') )
 
             olv.popTags(olv.novel, $('.col-info-desc'));
+
+            if( !olv.is('novel.cover') ) {
+              olv.novel.cover = $('.book img').attr('data-src');
+              GM_setValue('novel.'+olv.novel.id, olv.novel);
+            }
 
             $('.olv.parrot').show();
             console.log($('.desc-text:contains(Read more)').html())
@@ -4861,6 +4877,9 @@ if( $('#prev_chap').length > 0 )
         //if( window.location.hostname == 'www.royalroad.com' )
           //olv.preLoadNext = 1;
 
+        if( olv.reader.auto == 0 )
+          olv.preLoadNext = 0;
+
         if( olv.preLoadNext == 1 && typeof olv.nextChapter != 'undefined' && $(olv.nextChapter).find(olv.site.content_id).length > 0 ) {
           //if( typeof olv.novel != 'undefined' )
           //GM_setValue('novel.'+novel.id, olv.novel);
@@ -5329,11 +5348,22 @@ if( typeof jQuery != undefined ) {
         //$('.desc-text p').wrapAll('<div id="chapter-content" />');
         $('.desc-text').attr('id', 'chapter-content');
         olv.site.content = '#chapter-content';
+
+        //console.log($(olv.site.content).html(), 'lne', $(olv.site.content + ' p').length)
+        if( $(olv.site.content + ' p').length == 0 )
+          $(olv.site.content).html('<p>'+$(olv.site.content).html()+'</p>');
+
+        olv.descHtml = $(olv.site.content).html();
+        setTimeout(function(){
+          if( $(olv.site.content + ' p').length == 0 )
+            $(olv.site.content).html('<p para="0">'+olv.descHtml+'</p>');
+        }, 400);
+
         //olv.content = $(olv.site.content).children();
         olv.content = $(olv.site.content + ' p');
 
-        if( olv.content.length == 1 )
-          $(olv.site.content + ' p').attr('para', 0);
+        //if( olv.content.length == 1 )
+          //$(olv.site.content + ' p').attr('para', 0);
 
         if( !olv.is('paragraph') )
         olv.paragraph = 0;
@@ -5565,7 +5595,10 @@ if( !olv.is('btn') )
     ls: {}
   };
 
-olv.btn.ls = {preLoadNext: ['BgLoadNext', 'checkbox']};
+olv.btn.ls = {
+  preLoadNext: ['BgLoadNext', 'checkbox'],
+  readbuffer: ['', 'text']
+};
 
 olv.op = {
   'checkbox': function(arg){
@@ -5588,10 +5621,15 @@ olv.op = {
 //var arg = 'preLoadNext';
 
 Object.entries(olv.btn.ls).forEach(([arg, val]) => {
+  if( val[1] == 'checkbox' )
 opts += '<div class="btn '+arg+'" style="\
 padding:2px 6px; cursor:default;margin-top:5px; float:right;">\
 '+val[0]+': <input olvBtn="'+arg+'" class="'+arg+'" type="checkbox" value="'+(localStorage.getItem('olv.'+arg) || 0)+'" ' + (olv[arg] != 0 ? 'checked="checked"' : '') + ' /></div>';
-
+  else if( val[1] == 'text' )
+    opts += '<div class="btn '+arg+'" style="\
+padding:2px 6px; cursor:default;margin-top:5px; float:right;">\
+'+val[0]+'<input olvBtn="'+arg+'" class="'+arg+'" type="text" placeholder="'+arg+'" value="'+(localStorage.getItem('olv.'+arg) || '')+'" ' + ' style="\
+background: transparent;border: 0; width: 100px;" /></div>';
 });
 
 if( !olv.is('newOptions') ) {
@@ -7971,6 +8009,13 @@ $( opts ).insertBefore( button );
 
     }
 
+      //check if exists
+      setTimeout(function(){
+      var chf = $(olv.site.content + ' > p:contains("'+olv.firstPg+'")');
+      if( chf.length == 1 )
+        chf.text( chf.text().substr(chf.text().lastIndexOf(olv.firstPg)) );
+      }, 201);
+
       //if first paragraph shows up multiple times, squash later instances.
       last = ''; //replace with remove duplicates later
       $(olv.site.content + ' > p').each(function(){
@@ -8664,3 +8709,139 @@ else
 {
  	console.log('olv: jquery not loaded')
 }
+
+$(document).ready(function(){
+  //return;
+if( typeof olv.read != 'undefined')
+(function() {
+    if (typeof olv.mediaHackInitialized !== 'undefined') return; // Prevent duplicate init
+    olv.mediaHackInitialized = true;
+
+    //<audio controls autoplay loop src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=" class="audiohack" />
+    // Silent audio (1s of silence, looped)
+    const silentAudioUrl = 'data:audio/ogg;base64,T2dnUwACAAAAAAAAAAAyzN3NAAAAAGFf2X8BM39GTEFDAQAAAWZMYUMAAAAiEgASAAAAAAAkFQrEQPAAAAAAAAAAAAAAAAAAAAAAAAAAAE9nZ1MAAAAAAAAAAAAAMszdzQEAAAD5LKCSATeEAAAzDQAAAExhdmY1NS40OC4xMDABAAAAGgAAAGVuY29kZXI9TGF2YzU1LjY5LjEwMCBmbGFjT2dnUwAEARIAAAAAAAAyzN3NAgAAAKWVljkCDAD/+GkIAAAdAAABICI=';
+
+  	const audio = document.createElement("audio");
+    audio.setAttribute("x-webkit-airplay", "deny");
+    audio.preload = "auto";
+    audio.loop = true;
+    //audio.src = 'http://localhost:9094/res/That%20Time%20I%20Got%20Reincarnated%20as%20a%20Slime%20-%20Like%20Flames%20ENGLISH%20Ver%20AmaLee%20%28feat.%20NANO%29.mp3';
+    audio.src = 'http://localhost:9094/res/Short_Silent,_Empty_Audio.ogg';
+    //audio.src = silentAudioUrl;
+    //audio.play();
+
+    //const audio = new Audio('http://localhost:9094/res/Short_Silent,_Empty_Audio.ogg');
+    olv.audio = audio;
+    //audio.loop = true;
+
+    // Start silent audio (may need user gesture on first play)
+    function startSilentAudio() {
+        //audio.play().catch(err => console.log('Silent audio play blocked (needs gesture):', err));
+    }
+
+    // Sync silent audio state with TTS
+    function syncAudioState() {
+        if (olv.reader.auto === 1) {
+            audio.play().catch(() => {}); // Resume if paused
+        } else {
+            audio.pause();
+        }
+    }
+
+    // Update media metadata (call this whenever chapter/title changes)
+    function updateMediaMetadata() {
+        if (!('mediaSession' in navigator)) return;
+
+        let title = document.title || 'TTS Novel Reader';
+        let artist = 'Unknown Novel';
+        let album = 'Current Chapter';
+
+        // Try to extract better info from page (customize based on sites you use)
+        if (typeof chapter !== 'undefined' && chapter.name) {
+            title = chapter.name;
+        } else if ($('.chapter-title, .chr-title, h1').length) {
+            title = $('.chapter-title, .chr-title, h1').first().text().trim();
+        }
+        if (typeof novel !== 'undefined' && novel.name) {
+            artist = novel.name;
+        }
+
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: title,
+            artist: artist,
+            album: album,
+            // artwork: [{ src: 'https://example.com/cover.jpg', sizes: '512x512', type: 'image/jpg' }] // Optional: add a cover URL
+        });
+    }
+
+    // Init Media Session handlers
+    if ('mediaSession' in navigator) {
+        // Play/Pause from system controls → TTS
+        navigator.mediaSession.setActionHandler('play', () => {
+            if (olv.reader.auto !== 1) {
+                $('.olv .play').click(); // Or directly call olv.reader.play() / olv.read()
+            }
+            syncAudioState();
+        });
+
+        navigator.mediaSession.setActionHandler('pause', () => {
+            if (olv.reader.auto === 1) {
+                $('.olv .pause').click(); // Or directly pause TTS
+            }
+            syncAudioState();
+        });
+
+        // Next/Previous track → Chapter navigation (if you have next/prev logic)
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+            if (typeof olv.site !== 'undefined' && $(olv.site.next).length) {
+                $(olv.site.next).click(); // Or call your next chapter function
+            }
+        });
+
+        navigator.mediaSession.setActionHandler('previoustrack', () => {
+            // If you have prev chapter logic, trigger it here
+            // e.g., window.history.back() or custom prev button
+        });
+
+        // Optional: Seek (skip forward/back in current utterance if implemented)
+        // navigator.mediaSession.setActionHandler('seekforward', (details) => { /* skip ahead */ });
+        // navigator.mediaSession.setActionHandler('seekbackward', (details) => { /* rewind */ });
+    }
+
+    // Hook into your existing TTS start/pause to sync
+    const originalRead = olv.read;
+    olv.read = function() {
+        startSilentAudio(); // Ensure audio starts on first read (user gesture likely present)
+        updateMediaMetadata();
+        syncAudioState();
+        return originalRead.apply(this, arguments);
+    };
+
+    // Hook pause/stop
+    $(document).on('click', '.olv .pause', () => {
+        setTimeout(syncAudioState, 100); // Slight delay if needed
+    });
+
+    $(document).on('click', '.olv .play', () => {
+        startSilentAudio();
+        updateMediaMetadata();
+        syncAudioState();
+    });
+
+    // Update metadata on chapter change (hook into your next chapter logic)
+    const originalNext = olv.reader.next;
+    olv.reader.next = function() {
+        const result = originalNext.apply(this, arguments);
+        setTimeout(() => {
+            updateMediaMetadata();
+            if (olv.reader.auto === 1) startSilentAudio();
+        }, 500); // Delay to let new chapter load
+        return result;
+    };
+
+    // Initial metadata on load
+    updateMediaMetadata();
+
+    console.log('TTS Media Controls Hack initialized');
+})();
+});
