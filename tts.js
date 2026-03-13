@@ -172,7 +172,9 @@ if( typeof olv == "undefined" ) {
       list: {
         '-bars':/bars/ig, //fixes instances of '400 bars' read as 400 billion argentenian pasos
         'Meng\'er':/Menger/,
+        'Robot':/B80234615|B8017913/,
         'Cuhthulu':/Cthulhu/,
+        'AM Computing Institute':/AM\. Computing Institute/,
         casualties:/causalities/,
         practitioner:/practicioners/ig,
      		Autesh:/atesh/ig,
@@ -2422,7 +2424,7 @@ a {color: #82A82D;} .chapters a {display: block; color: #bbb;cursor: pointer;} .
 
           olv.fn.end.push( function(){
             $('#chr-content p:contains("0")').each(function(){
-              //console.log(/ 0$/g.test($(this).text().trim()), $(this).text().trim().replace(/ 0$/g, ''));
+              //console.log(/ 0$/g.test($(this).text().trim()), $(this).text().trim().replace(/ 0$/g, ''));
               if( /\s0$/g.test($(this).text().trim()) )
                 $(this).text($(this).text().trim().replace(/\s0$/g, ''));
             });
@@ -5156,6 +5158,19 @@ olv.is = function(){
   return is('olv.' + arguments[0]);
 };
 
+olv.get = function(){
+  if( arguments.length == 0 )
+    return false;
+
+  if( !olv.is(arguments[0]) )
+    olv[arguments[0]] = localStorage.getItem('olv.'+arguments[0]);
+
+  if( [...arguments].includes('bool') )
+    olv[arguments[0]] = Number.parseInt(olv[arguments[0]]);
+
+  return olv[arguments[0]];
+};
+
 unsafeWindow.not = function(){
 //arguments[0].split('.')
   var is = this;
@@ -5597,7 +5612,8 @@ if( !olv.is('btn') )
 
 olv.btn.ls = {
   preLoadNext: ['BgLoadNext', 'checkbox'],
-  readbuffer: ['', 'text']
+  readbuffer: ['', 'text'],
+  autoonplay: ['AutoOnPlay', 'checkbox']
 };
 
 olv.op = {
@@ -5616,6 +5632,8 @@ olv.op = {
   }
 };
 
+//if( !olv.is('autoonplay') )
+  //olv.autoonplay = (localStorage.getItem('olv.autoonplay') || 0);
 //olv.fn.end.push
 //olv.preLoadNext = 0
 //var arg = 'preLoadNext';
@@ -6801,6 +6819,13 @@ $( opts ).insertBefore( button );
         		localStorage.setItem('olv.reader.auto', olv.reader.auto);
           }
           else {
+            if( olv.get('autoonplay', 'bool') ) {
+              olv.reader.auto = 1;
+              $('.olv.options .auto').prop('checked', ( olv.reader.auto ? true : false ) );
+              $('.olv button.auto').text( (olv.reader.auto != 0 ? 'Auto ▶' : 'Manual') );
+              localStorage.setItem('olv.reader.auto', olv.reader.auto);
+            }
+
          		//olv.read();
             if( $('.olv .pause:hidden').length ) {
           		olv.read();
@@ -6866,8 +6891,8 @@ $( opts ).insertBefore( button );
         }
 
         if( 1 + [57].indexOf(event.keyCode) ) {
-          if( event.shiftKey )
-            olv.preLoadNext = 0;
+          //if( event.shiftKey )
+          olv.preLoadNext = 0;
 
           olv.reader.next();
         }
